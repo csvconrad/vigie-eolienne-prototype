@@ -1,0 +1,748 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Vigie Éolienne — prototype</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap">
+<style>
+/* Layout: registre institutionnel — en-tête fixe, bande d'espace (ardoise = faits, ocre = mobilisation), colonne de lecture 70ch, panneaux de filtres latéraux qui s'empilent au téléphone. */
+:root{
+  --bg:#FBF9F4; --surface:#FFFFFF; --surface-2:#F3EEE3;
+  --ink:#23211D; --ink-2:#67605A; --line:#E3DBCB;
+  --primary:#2A6B7C; --primary-ink:#FFFFFF; --primary-soft:#DCEFF3;
+  --accent:#D0802E; --accent-soft:#FBE8D1; --valid:#3C8A52; --valid-bg:#E2F3E6;
+  --pending:#A4862A; --pending-bg:#FBF1D2; --danger:#A64444; --danger-bg:#F9E4E2;
+  --sun:#F2BE4F; --wind:#2A6B7C;
+  --sky-1:#BDE2F2; --sky-2:#FFF3D8; --hill-3:#C8DDA8; --hill-2:#9CC77A; --hill-1:#6FAB5A; --field:#E9C45A; --village:#FFF8EA; --roof:#B5563C; --tree:#4F8A47;
+  --display:"Source Serif 4",Georgia,"Times New Roman",serif;
+  --body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+/* Thème unique, clair, par choix : le site doit rester lumineux quel que soit le réglage de l'appareil. */
+
+/* Icônes */
+.ic{width:1.15em;height:1.15em;vertical-align:-.2em;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.ic.lg{width:28px;height:28px}
+.ic.xl{width:40px;height:40px;stroke-width:1.5}
+.icbox{display:grid;place-items:center;width:44px;height:44px;border-radius:10px;background:var(--primary-soft);color:var(--primary)}
+.icbox.accent{background:var(--accent-soft);color:var(--accent)}
+.icbox.valid{background:var(--valid-bg);color:var(--valid)}
+.eyebrow .ic{color:var(--accent)}
+
+/* Bannière */
+.hero{background:linear-gradient(180deg,var(--sky-1),var(--sky-2));border-bottom:1px solid var(--line)}
+.hero .wrap{display:grid;grid-template-columns:1.05fr 1fr;gap:28px;align-items:center;padding-block:34px 0}
+.hero .text{padding-bottom:34px}
+.hero svg.scene{width:100%;height:auto;display:block;max-width:100%}
+@media (max-width:760px){.hero .wrap{grid-template-columns:1fr;gap:10px}.hero .text{padding-bottom:10px}}
+.how{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+@media (max-width:760px){.how{grid-template-columns:1fr 1fr}}
+.how div{display:grid;gap:8px;font-size:14px}
+.windmark{color:var(--wind);opacity:.5}
+
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{margin:0;background:var(--bg) !important;color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.55}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+a{color:var(--primary)}
+h1,h2,h3{font-family:var(--display);font-weight:600;line-height:1.2;text-wrap:balance;margin:0}
+h1{font-size:34px}h2{font-size:24px}h3{font-size:19px}
+p{margin:0}
+button{font:inherit;cursor:pointer}
+.wrap{max-width:1120px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.readable{max-width:70ch}
+
+/* Bandeau prototype */
+.proto{background:var(--pending-bg);color:var(--ink);font-size:13px;border-bottom:1px solid var(--line)}
+.proto .wrap{padding-block:7px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+.proto strong{color:var(--pending)}
+
+/* En-tête */
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--surface);border-bottom:1px solid var(--line)}
+header.top .wrap{display:flex;align-items:center;gap:18px;padding-block:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink);font-family:var(--display);font-size:21px;font-weight:600;white-space:nowrap}
+.brand svg{width:26px;height:26px}
+.search{flex:1;min-width:160px;display:flex}
+.search input{width:100%;padding:8px 12px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--ink);font:inherit;font-size:14px}
+.session{display:flex;gap:8px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:4px;border:1px solid var(--primary);background:var(--primary);color:var(--primary-ink);text-decoration:none;font-weight:500;font-size:14px;line-height:1.2}
+.btn.ghost{background:transparent;color:var(--primary)}
+.btn.small{padding:5px 10px;font-size:13px}
+.btn.accent{background:var(--accent);border-color:var(--accent);color:#fff}
+nav.main{background:var(--surface)}
+nav.main .wrap{display:flex;gap:4px;overflow-x:auto;padding-block:0 0}
+nav.main a{padding:9px 12px;text-decoration:none;color:var(--ink-2);font-size:14px;font-weight:500;white-space:nowrap;border-bottom:3px solid transparent}
+nav.main a.on{color:var(--ink);border-bottom-color:var(--primary)}
+nav.main.members a.on{border-bottom-color:var(--accent)}
+.band{height:4px;background:var(--primary)}
+.band.members{background:var(--accent)}
+.space-label{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);padding-block:10px 0}
+
+main .wrap{padding-block:28px 60px}
+.eyebrow{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);font-weight:600}
+.meta{color:var(--ink-2);font-size:14px}
+.stack{display:grid;gap:18px}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.side{display:grid;grid-template-columns:250px 1fr;gap:28px;align-items:start}
+@media (max-width:760px){.grid2,.grid3,.side{grid-template-columns:1fr}h1{font-size:28px}}
+.grid2>*,.grid3>*,.side>*{min-width:0}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px}
+.card.flat{background:transparent}
+.panel{background:var(--surface-2);border-radius:6px;padding:14px 16px}
+.hr{border:0;border-top:1px solid var(--line);margin:0}
+
+.pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:3px;letter-spacing:.02em;white-space:nowrap}
+.pill.valid{background:var(--valid-bg);color:var(--valid)}
+.pill.pending{background:var(--pending-bg);color:var(--pending)}
+.pill.danger{background:var(--danger-bg);color:var(--danger)}
+.pill.neutral{background:var(--surface-2);color:var(--ink-2)}
+.tag{display:inline-block;font-size:12px;padding:2px 8px;border:1px solid var(--line);border-radius:3px;color:var(--ink-2);background:var(--surface);text-decoration:none;white-space:nowrap}
+.tag b{font-weight:600;color:var(--ink-2)}
+
+.doc{display:grid;grid-template-columns:1fr auto;gap:14px;padding:14px 0;border-bottom:1px solid var(--line)}
+.doc:last-child{border-bottom:0}
+.doc h3 a{text-decoration:none;color:var(--ink)}
+.doc h3 a:hover{text-decoration:underline}
+.doc .sum{font-size:14px;color:var(--ink-2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.doc>*{min-width:0}
+
+.seal{display:flex;gap:10px;align-items:flex-start;background:var(--valid-bg);border:1px solid color-mix(in srgb,var(--valid) 35%,transparent);border-radius:6px;padding:12px 14px}
+.seal .ck{flex:none;width:26px;height:26px;border-radius:50%;background:var(--valid);color:#fff;display:grid;place-items:center;font-size:14px;font-weight:700}
+.seal small{display:block;color:var(--ink-2);font-size:13px;margin-top:3px}
+.seal.compact{padding:6px 10px;gap:8px;font-size:13px}
+.seal.compact .ck{width:20px;height:20px;font-size:11px}
+
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-2);font-weight:600}
+.tablewrap{overflow-x:auto;background:var(--surface-2);border-radius:6px}
+code,.hash{font-family:var(--mono);font-size:12.5px;background:var(--surface-2);padding:1px 5px;border-radius:3px;word-break:break-all}
+
+.filters label{display:block;font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-2);font-weight:600;margin-top:12px;margin-bottom:5px}
+.filters label:first-child{margin-top:0}
+select,input[type=text],input[type=url],input[type=date],textarea{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:4px;background:var(--surface);color:var(--ink);font:inherit;font-size:14px}
+textarea{min-height:90px;resize:vertical}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:14px;padding:8px 0;border-bottom:1px solid var(--line)}
+.check:last-child{border-bottom:0}
+.check input{margin-top:4px;flex:none}
+
+.post{display:grid;gap:8px;padding:14px 0;border-bottom:1px solid var(--line)}
+.post:last-child{border-bottom:0}
+.post .who{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.post .who b{font-weight:600}
+.post .acts{display:flex;gap:14px;font-size:13px;color:var(--ink-2)}
+.post .acts a{color:var(--ink-2);text-decoration:none}
+.post .acts a:hover{text-decoration:underline}
+.quote{border-left:3px solid var(--primary);padding:8px 12px;background:var(--surface-2);border-radius:0 4px 4px 0;font-size:14px}
+
+.timeline{display:grid;gap:0;border-left:2px solid var(--line);margin-left:6px}
+.tl{position:relative;padding:4px 0 18px 18px}
+.tl::before{content:"";position:absolute;left:-7px;top:9px;width:12px;height:12px;border-radius:50%;background:var(--primary);border:2px solid var(--bg)}
+.tl time{font-family:var(--mono);font-size:12.5px;color:var(--ink-2)}
+
+.kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+@media (max-width:760px){.kpi{grid-template-columns:1fr 1fr}}
+.kpi div{display:grid;gap:4px;justify-items:start;border-top:2px solid var(--primary);padding-top:12px}
+.kpi .icbox{margin-bottom:4px}
+.kpi b{display:block;font-family:var(--display);font-size:30px;font-weight:600;font-variant-numeric:tabular-nums}
+.kpi span{font-size:13px;color:var(--ink-2)}
+
+.steps{display:flex;gap:0;font-size:13px;margin-bottom:14px;flex-wrap:wrap}
+.steps span{padding:6px 12px;border:1px solid var(--line);background:var(--surface);color:var(--ink-2)}
+.steps span.on{background:var(--primary);color:var(--primary-ink);border-color:var(--primary)}
+.steps span:first-child{border-radius:4px 0 0 4px}.steps span:last-child{border-radius:0 4px 4px 0}
+
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:6px;font-size:14px;z-index:20}
+footer{border-top:1px solid var(--line);color:var(--ink-2);font-size:13px}
+footer .wrap{padding-block:22px;display:flex;flex-wrap:wrap;gap:12px 24px}
+footer a{color:var(--ink-2)}
+.hidden{display:none}
+.notice{border:1px dashed var(--line);border-radius:6px;padding:12px 14px;font-size:14px;color:var(--ink-2)}
+@media (prefers-reduced-motion:no-preference){.btn,.doc h3 a{transition:opacity .15s}}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+</head>
+<body>
+
+
+<svg style="display:none" aria-hidden="true">
+  <!-- Jeu d'icônes Vigie Éolienne — trait 1.75, bouts ronds, grille 24 -->
+  <symbol id="i-vigie" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M4 16.5 20 8.5"/><path d="M8 8.8c1.5-.6 3-.4 4.2.3"/></symbol>
+  <symbol id="i-vent" viewBox="0 0 24 24"><path d="M3 9c3-2.4 6.2-2.4 9 0s6 2.4 9 0"/><path d="M3 15c3-2.4 6.2-2.4 9 0s6 2.4 9 0"/></symbol>
+  <symbol id="i-archive" viewBox="0 0 24 24"><path d="M3 8h18v12H3z"/><path d="M5 8V5h14v3"/><path d="M9 12h6"/></symbol>
+  <symbol id="i-document" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 12h6M9 16h6"/></symbol>
+  <symbol id="i-sceau" viewBox="0 0 24 24"><path d="M12 2.5 14.8 5l3.7.2.2 3.7L21 12l-2.3 3.1-.2 3.7-3.7.2L12 21.5 9.2 19l-3.7-.2-.2-3.7L3 12l2.3-3.1.2-3.7L9.2 5z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol>
+  <symbol id="i-territoire" viewBox="0 0 24 24"><path d="M2 19c3-5 6-7 9-7s6 3 11 7"/><path d="M2 19c2-2 4-3 6-3"/><path d="M15 4a3 3 0 0 1 3 3c0 2.2-3 5-3 5s-3-2.8-3-5a3 3 0 0 1 3-3z"/></symbol>
+  <symbol id="i-projet" viewBox="0 0 24 24"><path d="M12 11v10"/><path d="M9 21h6"/><path d="M12 11 6.5 7.5"/><path d="M12 11l6.3-1"/><path d="M12 11l-.8 6.3"/><circle cx="12" cy="11" r="1.4"/></symbol>
+  <symbol id="i-groupe" viewBox="0 0 24 24"><circle cx="8" cy="9" r="3"/><circle cx="16.5" cy="10" r="2.5"/><path d="M2.5 19c.6-3.2 2.7-5 5.5-5s4.9 1.8 5.5 5"/><path d="M14.5 18c.4-2.2 1.6-3.5 3.5-3.5s3.1 1.3 3.5 3.5"/></symbol>
+  <symbol id="i-fil" viewBox="0 0 24 24"><path d="M4 5h16v10H9l-5 4z"/><path d="M8 9h8M8 12h5"/></symbol>
+  <symbol id="i-strategie" viewBox="0 0 24 24"><circle cx="5" cy="18" r="2"/><circle cx="12" cy="9" r="2"/><circle cx="19" cy="14" r="2"/><path d="M6.5 16.5 10.5 10.5M13.8 10l3.7 3"/><path d="M19 8V4h-3"/></symbol>
+  <symbol id="i-evenement" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M8 14h3"/></symbol>
+  <symbol id="i-source" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
+  <symbol id="i-empreinte" viewBox="0 0 24 24"><path d="M6 11a6 6 0 0 1 12 0v2"/><path d="M9 11a3 3 0 0 1 6 0v5"/><path d="M12 11v9"/><path d="M4 14a8 8 0 0 1 2-7"/><path d="M18 17a8 8 0 0 0 2-6"/></symbol>
+  <symbol id="i-partager" viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m8 7 4-4 4 4"/><path d="M5 13v7h14v-7"/></symbol>
+  <symbol id="i-carte" viewBox="0 0 24 24"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/></symbol>
+  <symbol id="i-memoire" viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5z"/><path d="M8 9h8M8 13h8M8 17h5"/><path d="M19 4l2 2-2 2"/></symbol>
+  <symbol id="i-etude" viewBox="0 0 24 24"><path d="M6 3h9l3 3v9"/><path d="M6 3v18h7"/><circle cx="16.5" cy="17.5" r="3"/><path d="m18.8 19.8 2.2 2.2"/><path d="M9 9h5M9 12h4"/></symbol>
+  <symbol id="i-municipal" viewBox="0 0 24 24"><path d="M4 21h16"/><path d="M6 21V10h12v11"/><path d="M4 10 12 4l8 6"/><path d="M12 4V2"/><path d="M10 21v-5h4v5"/></symbol>
+  <symbol id="i-promoteur" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M9 8V5h6v3"/><path d="M3 13h18"/></symbol>
+  <symbol id="i-gouvernement" viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M5 10h14"/><path d="M4 10 12 4l8 6"/><path d="M6 10v11M10 10v11M14 10v11M18 10v11"/></symbol>
+  <symbol id="i-temoignage" viewBox="0 0 24 24"><path d="M4 20c0-4 3-7 7-7"/><circle cx="11" cy="7" r="3.5"/><path d="M15 15c0 3 2 5 5 5-1-3 1-5 1-5"/><path d="M15 15h4"/></symbol>
+  <symbol id="i-actualite" viewBox="0 0 24 24"><path d="M4 5h14v14H6a2 2 0 0 1-2-2z"/><path d="M18 9h2v8a2 2 0 0 1-2 2"/><path d="M7 9h5v4H7zM14 9h1M14 12h1M7 16h8"/></symbol>
+  <symbol id="i-ressources" viewBox="0 0 24 24"><path d="M3 9h18v11H3z"/><path d="M9 9V6h6v3"/><path d="M12 13v4M10 15h4"/></symbol>
+  <symbol id="i-verifier" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 5 5"/><path d="m8.5 11 2 2 3.5-4"/></symbol>
+  <symbol id="i-signaler" viewBox="0 0 24 24"><path d="M5 21V4"/><path d="M5 4h12l-2.5 4L17 12H5"/></symbol>
+  <symbol id="i-utile" viewBox="0 0 24 24"><path d="M7 11v9H3v-9z"/><path d="M7 11 11 4c1.5 0 2.5 1 2.5 2.5V10h5a2 2 0 0 1 2 2.3l-1 6a2 2 0 0 1-2 1.7H7"/></symbol>
+  <symbol id="i-compte" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c.8-4 4-6 8-6s7.2 2 8 6"/></symbol>
+  <symbol id="i-soumettre" viewBox="0 0 24 24"><path d="M12 16V4"/><path d="m8 8 4-4 4 4"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></symbol>
+  <symbol id="i-soleil" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+</svg>
+
+<div class="proto"><div class="wrap">
+  <span><strong>Prototype</strong> · toutes les données sont fictives (projets, documents, membres). Cliquez partout. Rien n'est enregistré.</span>
+  <span>Espace actuel : <b id="spaceName">Les faits</b></span>
+</div></div>
+
+<header class="top"><div class="wrap">
+  <a class="brand" href="#accueil" aria-label="Vigie Éolienne, accueil">
+    <svg class="ic lg" style="stroke-width:2;color:var(--primary)" aria-hidden="true"><use href="#i-vigie"/></svg>
+    Vigie Éolienne
+  </a>
+  <div class="search"><input id="q" type="text" placeholder="Chercher dans l'archive : étude, MRC, promoteur, thème…" aria-label="Recherche"></div>
+  <div class="session" id="session"></div>
+</div></header>
+<nav class="main" id="nav"><div class="wrap"></div></nav>
+<div class="band" id="band"></div>
+
+<section class="hero" id="hero" hidden><div class="wrap">
+  <div class="text stack" style="gap:14px">
+    <span class="eyebrow"><svg class="ic"><use href="#i-vent"/></svg> Plateforme citoyenne · Québec</span>
+    <h1 style="font-size:38px">Voir venir. Comprendre. Se parler d'une MRC à l'autre.</h1>
+    <p style="font-size:18px;color:var(--ink-2)">Les études, les procès-verbaux, les contrats et les mémoires que les citoyens accumulent chacun de leur côté, réunis dans une seule archive publique et vérifiée.</p>
+    <div class="row"><a class="btn" href="#archive"><svg class="ic"><use href="#i-archive"/></svg> Consulter l'archive</a><a class="btn ghost" href="#projets"><svg class="ic"><use href="#i-carte"/></svg> Les projets par territoire</a></div>
+  </div>
+  <svg class="scene" viewBox="0 0 640 400" role="img" aria-label="Paysage rural : collines, champs, un village et une vigie qui regarde vers l'horizon">
+    <defs>
+      <linearGradient id="g-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--sky-1)"/><stop offset="1" stop-color="var(--sky-2)"/></linearGradient>
+      <radialGradient id="g-sun"><stop offset="0" stop-color="var(--sun)"/><stop offset=".6" stop-color="var(--sun)" stop-opacity=".9"/><stop offset="1" stop-color="var(--sun)" stop-opacity="0"/></radialGradient>
+    </defs>
+    <rect x="0" y="0" width="640" height="400" rx="14" fill="url(#g-sky)"/>
+    <circle cx="520" cy="96" r="70" fill="url(#g-sun)" opacity=".55"/>
+    <circle cx="520" cy="96" r="34" fill="var(--sun)"/>
+    <g fill="none" stroke="var(--wind)" stroke-width="2.5" stroke-linecap="round" opacity=".45">
+      <path d="M40 90c40-26 80-26 120 0s80 26 120 0"/>
+      <path d="M120 140c40-26 80-26 120 0s80 26 120 0 80-26 120 0"/>
+      <path d="M20 190c40-26 80-26 120 0s80 26 120 0"/>
+    </g>
+    <path d="M0 262c80-40 150-52 230-40s150 44 230 30 120-40 180-50v120H0z" fill="var(--hill-3)"/>
+    <path d="M0 300c70-30 140-38 210-26s140 40 220 26 140-34 210-30v130H0z" fill="var(--hill-2)"/>
+    <g stroke="var(--field)" stroke-width="3" stroke-linecap="round" opacity=".7">
+      <path d="M60 318c40-10 80-14 120-8"/><path d="M70 334c40-10 80-14 120-8"/><path d="M80 350c40-10 80-14 120-8"/>
+      <path d="M430 300c40-8 80-10 120-4"/><path d="M440 316c40-8 80-10 120-4"/>
+    </g>
+    <g>
+      <rect x="296" y="256" width="46" height="34" fill="var(--village)"/>
+      <path d="M292 258l27-16 27 16z" fill="var(--roof)"/>
+      <rect x="322" y="222" width="14" height="36" fill="var(--village)"/>
+      <path d="M320 224l9-24 9 24z" fill="var(--roof)"/>
+      <path d="M329 196v-8M325 192h8" stroke="var(--roof)" stroke-width="2" stroke-linecap="round"/>
+      <rect x="352" y="266" width="26" height="22" fill="var(--village)"/><path d="M349 268l16-11 16 11z" fill="var(--roof)"/>
+      <rect x="262" y="270" width="24" height="20" fill="var(--village)"/><path d="M259 272l15-10 15 10z" fill="var(--roof)"/>
+      <rect x="388" y="270" width="20" height="18" fill="var(--village)"/><path d="M385 272l13-9 13 9z" fill="var(--roof)"/>
+    </g>
+    <g fill="var(--tree)">
+      <circle cx="238" cy="282" r="10"/><circle cx="224" cy="288" r="8"/><circle cx="420" cy="284" r="9"/><circle cx="436" cy="290" r="7"/><circle cx="150" cy="296" r="8"/>
+    </g>
+    <path d="M0 352c90-34 180-40 270-20s170 30 250 10 90-20 120-14v72H0z" fill="var(--hill-1)"/>
+    <g stroke="var(--ink)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity=".8">
+      <path d="M68 342 78 258M114 342l-10-84"/>
+      <path d="M72 316h38M75 290h32"/><path d="M72 316l35-26M110 316 75 290"/>
+      <path d="M62 258h58"/><path d="M66 258v-16M116 258v-16M66 242h50"/>
+      <path d="M60 346h62"/>
+    </g>
+    <g fill="var(--ink)" opacity=".8">
+      <circle cx="98" cy="226" r="5.5"/><path d="M92 233h12l-1.5 25h-9z"/><path d="M104 236l12-6-1 3-10 7z"/>
+    </g>
+    <g fill="none" stroke="var(--village)" stroke-width="2" stroke-linecap="round" opacity=".9"><path d="M36 362h44M48 374h44M30 386h30"/></g>
+  </svg>
+</div></section>
+
+<main><div class="wrap" id="view"></div></main>
+
+<footer><div class="wrap">
+  <span>Code libre (AGPL-3.0) · Contenus des membres CC BY-SA</span>
+  <a href="#charte">Charte de participation</a>
+  <a href="#confidentialite">Confidentialité et Loi 25</a>
+  <a href="#verifier">Vérifier un fichier</a>
+  <span>Demande de retrait : retrait@ (adresse de démo)</span>
+  <span>Fait au Québec, hébergé au Québec</span>
+</div></footer>
+
+<script>
+/* ───────── Données fictives ───────── */
+const T = {
+  sources:{slug:"mrc-des-sources",name:"MRC des Sources",level:"MRC",region:"Estrie"},
+  adrien:{slug:"saint-adrien",name:"Saint-Adrien",level:"mun.",parent:"MRC des Sources"},
+  wotton:{slug:"wotton",name:"Wotton",level:"mun.",parent:"MRC des Sources"},
+  hsf:{slug:"mrc-du-haut-saint-francois",name:"MRC du Haut-Saint-François",level:"MRC",region:"Estrie"},
+  bsl:{slug:"mrc-de-la-matapedia",name:"MRC de La Matapédia",level:"MRC",region:"Bas-Saint-Laurent"},
+};
+const PROJECTS = [
+  {id:"collines-demo",name:"Démo · Parc éolien des Collines",status:"Consultation",statusKind:"pending",promoter:"Énergie Vallon inc. (fictif)",partner:"MRC des Sources (partenaire proposé)",mw:180,turbines:30,territories:["sources","adrien","wotton"],
+   summary:"Projet fictif de 30 turbines de 6 MW sur les hauteurs entre Saint-Adrien et Wotton, présenté à la MRC en vue d'une participation financière municipale. Séance d'information tenue, consultation en cours.",
+   timeline:[
+     {d:"2026-03-12",t:"Dépôt de l'avis d'intérêt du promoteur à la MRC",doc:"pv-mrc-2026-03"},
+     {d:"2026-05-04",t:"Résolution de la MRC pour étudier un partenariat financier",doc:"pv-mrc-2026-05"},
+     {d:"2026-06-18",t:"Séance d'information publique du promoteur à Wotton",doc:"presentation-promoteur"},
+     {d:"2026-08-30",t:"Dépôt de l'étude acoustique préliminaire",doc:"etude-acoustique"},
+     {d:"2026-09-22",t:"Mémoire du Regroupement citoyen des Sources",doc:"memoire-regroupement"}]},
+  {id:"vallee-demo",name:"Démo · Projet de la Vallée",status:"Appel d'offres",statusKind:"neutral",promoter:"Consortium Nordvent (fictif)",partner:"MRC du Haut-Saint-François",mw:240,turbines:40,territories:["hsf"],
+   summary:"Projet fictif soumis à un appel d'offres. Aucune consultation publique encore tenue.",timeline:[{d:"2026-07-02",t:"Annonce dans un appel d'offres",doc:"appel-offres"}]},
+  {id:"matapedia-demo",name:"Démo · Parc de la Matapédia II",status:"En exploitation",statusKind:"valid",promoter:"Éoliennes du Fleuve (fictif)",partner:"MRC de La Matapédia",mw:150,turbines:25,territories:["bsl"],
+   summary:"Projet fictif en exploitation depuis 2021. Sert de référence pour les retombées réelles observées par un groupe citoyen local.",timeline:[{d:"2021-11-15",t:"Mise en service",doc:"bilan-retombees"}]},
+];
+const DOCS = [
+  {id:"etude-acoustique",title:"Étude acoustique préliminaire — secteur des Collines (version 2)",type:"Étude ou rapport technique",authors:"Acoustique Nord-Est (fictif), pour Énergie Vallon inc.",date:"2026-08-30",source:"https://exemple.invalid/etude-acoustique-v2.pdf",hosting:"Hébergé",license:"Document rendu public (séance d'information)",pages:84,
+   status:"valid",territories:["adrien","wotton","sources"],project:"collines-demo",themes:["Santé et bruit"],
+   summary:"Modélisation du bruit de 30 turbines de 6 MW selon le scénario d'implantation de juin 2026. Conclut au respect de la limite de 40 dBA la nuit pour 41 des 44 résidences étudiées. Trois résidences sur le rang des Collines dépassent la limite dans le scénario sans mesure d'atténuation.",
+   validation:[{d:"2026-09-03 19:42",who:"Vigie-Estrie",group:"Saint-Adrien",decision:"Validé",proto:"v1",hash:"3f9a1c7e2b4d8f0a6c5e9b1d2a7f4c8e0b3d6a9f1c2e5b8d4a7f0c3e6b9d2a5f"},{d:"2026-09-01 21:10",who:"Vigie-Estrie",group:"Saint-Adrien",decision:"Précisions demandées",proto:"v1",note:"La version 1 était un extrait de 12 pages. Demande du document intégral."}],
+   related:["memoire-regroupement","presentation-promoteur"]},
+  {id:"pv-mrc-2026-05",title:"Procès-verbal du conseil de la MRC des Sources — séance du 4 mai 2026",type:"Document municipal ou de MRC",authors:"MRC des Sources",date:"2026-05-04",source:"https://exemple.invalid/mrc/pv-2026-05-04.pdf",hosting:"Hébergé",license:"Document public",pages:14,
+   status:"valid",territories:["sources"],project:"collines-demo",themes:["Finances municipales","Processus de consultation"],
+   summary:"Résolution 2026-05-117 mandatant la direction générale pour évaluer une participation de la MRC au capital du projet des Collines. Vote : 9 pour, 3 contre, 1 abstention. Aucune consultation publique préalable mentionnée.",
+   validation:[{d:"2026-05-11 08:15",who:"Archiviste-Wotton",group:"Wotton",decision:"Validé",proto:"v1",hash:"a71b3e9c4f2d6a8b0c1e5f7d9a3b2c4e6f8a0b1d3c5e7f9a2b4c6d8e0f1a3b5c"}],related:["pv-mrc-2026-03"]},
+  {id:"pv-mrc-2026-03",title:"Procès-verbal du conseil de la MRC des Sources — séance du 12 mars 2026",type:"Document municipal ou de MRC",authors:"MRC des Sources",date:"2026-03-12",source:"https://exemple.invalid/mrc/pv-2026-03-12.pdf",hosting:"Hébergé",license:"Document public",pages:11,
+   status:"valid",territories:["sources"],project:"collines-demo",themes:["Processus de consultation"],
+   summary:"Dépôt de la lettre d'intérêt d'Énergie Vallon inc. Le conseil en prend acte sans débat. Point 7.3.",
+   validation:[{d:"2026-05-11 08:20",who:"Archiviste-Wotton",group:"Wotton",decision:"Validé",proto:"v1",hash:"c2d4e6f8a0b1c3d5e7f9a2b4c6d8e0f1a3b5c7d9e1f3a5b7c9d1e3f5a7b9c1d3"}],related:["pv-mrc-2026-05"]},
+  {id:"presentation-promoteur",title:"Présentation à la séance d'information publique de Wotton, 18 juin 2026",type:"Document de promoteur",authors:"Énergie Vallon inc. (fictif)",date:"2026-06-18",source:"https://exemple.invalid/vallon/seance-wotton.pdf",hosting:"Hébergé",license:"Document rendu public (séance d'information)",pages:38,
+   status:"valid",territories:["wotton","sources"],project:"collines-demo",themes:["Retombées économiques","Paysage et patrimoine"],
+   summary:"Diapositives présentées par le promoteur. Retombées annoncées de 1,2 M$ par année pour la MRC, simulations visuelles depuis 4 points de vue, calendrier visant une mise en service en 2029. Les hypothèses financières ne sont pas détaillées.",
+   validation:[{d:"2026-06-25 20:05",who:"Vigie-Estrie",group:"Saint-Adrien",decision:"Validé",proto:"v1",hash:"e1f3a5b7c9d1e3f5a7b9c1d3e5f7a9b1c3d5e7f9a1b3c5d7e9f1a3b5c7d9e1f3"}],related:["etude-acoustique"]},
+  {id:"memoire-regroupement",title:"Mémoire du Regroupement citoyen des Sources sur le projet des Collines",type:"Mémoire ou lettre d'un groupe citoyen",authors:"Regroupement citoyen des Sources (fictif)",date:"2026-09-22",source:"Déposé à la MRC le 22 septembre 2026 ; copie fournie par le groupe",hosting:"Hébergé",license:"CC BY-SA 4.0",pages:27,
+   status:"valid",territories:["sources","adrien","wotton"],project:"collines-demo",themes:["Finances municipales","Paysage et patrimoine","Processus de consultation"],
+   summary:"Analyse des risques financiers d'une participation municipale, demande de consultation formelle avant toute résolution d'engagement, inventaire des points de vue patrimoniaux touchés. Annexe : 212 signatures (non publiées ici).",
+   validation:[{d:"2026-09-24 18:30",who:"Archiviste-Wotton",group:"Wotton",decision:"Validé",proto:"v1",hash:"b9c1d3e5f7a9b1c3d5e7f9a1b3c5d7e9f1a3b5c7d9e1f3a5b7c9d1e3f5a7b9c1",note:"Annexe des signatures retirée du fichier hébergé (renseignements personnels)."}],related:["etude-acoustique","pv-mrc-2026-05"]},
+  {id:"bilan-retombees",title:"Trois ans après : ce que le parc de la Matapédia II a vraiment rapporté à la MRC",type:"Texte d'un membre",authors:"Membre « Riverain-Matapédia » (pseudonyme)",date:"2026-04-10",source:"Texte original déposé sur la plateforme",hosting:"Hébergé",license:"CC BY-SA 4.0",pages:6,
+   status:"valid",territories:["bsl"],project:"matapedia-demo",themes:["Retombées économiques","Finances municipales"],
+   summary:"Comparaison entre les retombées annoncées en 2018 et les montants réellement versés à la MRC de 2021 à 2024, d'après les états financiers publics. Les versements représentent 61 % des montants annoncés. Chaque chiffre renvoie à un document de l'archive.",
+   validation:[{d:"2026-04-14 12:00",who:"Vigie-Estrie",group:"Saint-Adrien",decision:"Validé",proto:"v1",hash:"d7e9f1a3b5c7d9e1f3a5b7c9d1e3f5a7b9c1d3e5f7a9b1c3d5e7f9a1b3c5d7e9",note:"Validé comme témoignage : l'authenticité est attestée, pas les conclusions. Les sources citées sont toutes dans l'archive."}],related:[]},
+  {id:"appel-offres",title:"Appel d'offres pour l'achat d'électricité de source éolienne — extrait concernant l'Estrie",type:"Document gouvernemental",authors:"Hydro-Québec",date:"2026-07-02",source:"https://exemple.invalid/hq/ao-2026.pdf",hosting:"Lien seulement",license:"Tous droits réservés",pages:null,
+   status:"valid",territories:["hsf"],project:"vallee-demo",themes:["Contrats et appels d'offres","Réseau et raccordement"],
+   summary:"Conditions de l'appel d'offres : puissance recherchée, exigence de participation d'une entité locale, grille de pondération. Référencé par lien ; résumé maison.",
+   validation:[{d:"2026-07-09 09:00",who:"Vigie-Estrie",group:"Saint-Adrien",decision:"Validé",proto:"v1",hash:null}],related:[]},
+  {id:"etude-immobilier",title:"Effet des parcs éoliens sur la valeur des propriétés résidentielles : revue de littérature",type:"Étude ou rapport technique",authors:"Université (fictive), Chaire en économie rurale",date:"2025-11-20",source:"https://exemple.invalid/doi/10.0000/demo",hosting:"Lien seulement",license:"Article de revue (accès restreint)",pages:null,
+   status:"pending",territories:[],project:null,themes:["Valeur immobilière"],
+   summary:"Synthèse de 31 études nord-américaines. Effets négatifs mesurables dans un rayon de 1 à 2 km, variables selon la visibilité et la densité. Soumis par un membre de la MRC du Haut-Saint-François, en attente de validation.",
+   validation:[],related:[]},
+  {id:"temoignage-rang",title:"Vivre sur le rang des Collines : ce qu'on nous a dit, ce qu'on a lu",type:"Texte d'un membre",authors:"Membre « Collines-7 » (pseudonyme)",date:"2026-10-02",source:"Texte original",hosting:"Hébergé",license:"CC BY-NC 4.0",pages:3,
+   status:"pending",territories:["adrien"],project:"collines-demo",themes:["Santé et bruit","Paysage et patrimoine"],
+   summary:"Récit d'une résidente sur la séance d'information et la lecture de l'étude acoustique. En attente de validation.",validation:[],related:[]},
+];
+const GROUPS = [
+  {id:"saint-adrien",name:"Saint-Adrien",territory:"adrien",members:23,facilitators:["Vigie-Estrie"],desc:"Groupe de la municipalité de Saint-Adrien. Premier groupe de la plateforme.",next:"Séance du conseil municipal — mardi 3 novembre, 19 h 30, salle communautaire"},
+  {id:"wotton",name:"Wotton",territory:"wotton",members:17,facilitators:["Archiviste-Wotton"],desc:"Groupe de la municipalité de Wotton.",next:"Rencontre de préparation au conseil de la MRC — 12 novembre"},
+  {id:"mrc-des-sources",name:"MRC des Sources",territory:"sources",members:41,facilitators:["Vigie-Estrie","Archiviste-Wotton"],desc:"Coordination entre les groupes municipaux de la MRC. Stratégie commune face au conseil de la MRC.",next:"Conseil de la MRC — mercredi 18 novembre, 19 h"},
+  {id:"matapedia",name:"MRC de La Matapédia",territory:"bsl",members:12,facilitators:["Riverain-Matapédia"],desc:"Groupe d'une MRC où un parc est en exploitation. Partage l'expérience vécue.",next:"Aucun événement à venir"},
+];
+const POSTS = [
+  {g:"mrc-des-sources",who:"Archiviste-Wotton",when:"il y a 2 h",body:"J'ai déposé le procès-verbal du 4 mai. Regardez le vote : 9 pour, 3 contre. Les trois contre sont les maires de Saint-Adrien, Wotton et Saint-Camille. Ça vaut la peine de leur écrire pour les appuyer avant le 18.",doc:"pv-mrc-2026-05",useful:7,comments:3},
+  {g:"saint-adrien",who:"Collines-7",when:"hier",body:"J'ai relu l'étude acoustique. Page 61 : les trois maisons qui dépassent 40 dBA sont sur notre rang. Est-ce que quelqu'un a les coordonnées des deux autres familles ? On devrait se parler avant la séance.",doc:"etude-acoustique",useful:12,comments:6},
+  {g:"matapedia",who:"Riverain-Matapédia",when:"il y a 3 jours",body:"Pour les gens de l'Estrie : notre MRC s'est engagée en 2018 sur la base de retombées annoncées. Six ans plus tard, on est à 61 % de ce qui était promis. J'ai mis tous les états financiers dans l'archive. Demandez les chiffres réels, pas les projections.",doc:"bilan-retombees",useful:19,comments:4},
+  {g:"saint-adrien",who:"Vigie-Estrie",when:"il y a 4 jours",body:"Rappel : le mémoire est déposé. Merci aux 212 personnes qui ont signé. La version publique dans l'archive n'a pas les signatures, c'est voulu.",doc:"memoire-regroupement",useful:15,comments:2},
+];
+const STRATEGIES = [
+  {g:"MRC de La Matapédia",title:"Demander les états financiers réels avant toute résolution",body:"Avant le vote d'engagement, on a demandé par accès à l'information les états financiers des parcs comparables dans la région. On ne les a eus qu'après le vote. Leçon : faire la demande dès l'avis d'intérêt, pas à la consultation.",outcome:"Les chiffres obtenus ont servi au mémoire de l'Estrie quatre ans plus tard."},
+  {g:"MRC du Haut-Saint-François",title:"Une question par citoyen, par écrit, à chaque séance",body:"Dix personnes, dix questions courtes déposées par écrit à la période de questions. Le greffe doit répondre par écrit. Ça construit un dossier.",outcome:"Quatorze réponses écrites en trois mois, toutes dans l'archive."},
+];
+const THEMES = ["Santé et bruit","Paysage et patrimoine","Finances municipales","Valeur immobilière","Faune et habitats","Démantèlement et fin de vie","Processus de consultation","Contrats et appels d'offres","Réseau et raccordement","Retombées économiques"];
+
+/* ───────── État ───────── */
+let logged = false;
+const $ = s => document.querySelector(s);
+const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmtDate = d => { if(!d) return "s. d."; const [y,m,dd]=d.split("-"); return `${+dd} ${["janv.","févr.","mars","avr.","mai","juin","juill.","août","sept.","oct.","nov.","déc."][+m-1]} ${y}`; };
+const terr = key => T[key];
+const regionOf = key => { const t=T[key]; if(t.region) return t.region; const p=Object.values(T).find(x=>x.name===t.parent); return p?p.region:""; };
+const tagT = key => { const t=terr(key); return `<a class="tag" href="#territoire-${t.slug}"><b>${esc(t.level)}</b> ${esc(t.name)}</a>`; };
+const ic = (name,cls="") => `<svg class="ic ${cls}" aria-hidden="true"><use href="#i-${name}"/></svg>`;
+const TYPE_ICON = {"Étude ou rapport technique":"etude","Document gouvernemental":"gouvernement","Document municipal ou de MRC":"municipal","Document de promoteur":"promoteur","Mémoire ou lettre d'un groupe citoyen":"memoire","Article de presse":"actualite","Texte d'un membre":"temoignage","Livre ou chapitre":"document","Vidéo ou audio":"document"};
+const typeIcon = t => ic(TYPE_ICON[t]||"document");
+const statusPill = s => s==="valid"?`<span class="pill valid">Validé</span>`:s==="pending"?`<span class="pill pending">En attente</span>`:s==="danger"?`<span class="pill danger">Rejeté</span>`:`<span class="pill neutral">${esc(s)}</span>`;
+const sealCompact = d => { const v=d.validation.find(x=>x.decision==="Validé"); return v?`<div class="seal compact"><div class="ck">✓</div><div>Validé le ${esc(fmtDate(v.d.slice(0,10)))}<br><span class="meta">${esc(v.who)} · ${esc(v.group)}</span></div></div>`:`<div class="meta">Soumis, en attente d'un validateur</div>`; };
+function toast(m){ const t=document.createElement("div"); t.className="toast"; t.textContent=m; document.body.appendChild(t); setTimeout(()=>t.remove(),2200); }
+function copy(txt){ try{ navigator.clipboard.writeText(txt).then(()=>toast("Copié"),()=>toast("Sélectionnez le texte pour le copier")); }catch(e){ toast("Sélectionnez le texte pour le copier"); } }
+
+/* ───────── Rendu commun ───────── */
+function docRow(d){
+  return `<div class="doc"><div>
+    <h3><a href="#doc-${d.id}">${esc(d.title)}</a></h3>
+    <div class="meta">${typeIcon(d.type)} ${esc(d.type)} · ${esc(d.authors)} · ${esc(fmtDate(d.date))}</div>
+    <p class="sum">${esc(d.summary)}</p>
+    <div class="row" style="margin-top:6px;gap:6px">${d.territories.map(tagT).join("")}${d.themes.map(t=>`<span class="tag">${esc(t)}</span>`).join("")}</div>
+  </div><div>${sealCompact(d)}</div></div>`;
+}
+const NAV_PUBLIC = [["accueil","Accueil","vigie"],["archive","Archive","archive"],["projets","Projets","projet"],["ressources","Ressources","ressources"],["actualite","Actualité","actualite"],["apropos","À propos","sceau"],["iconographie","Iconographie","vent"]];
+const NAV_MEMBERS = [["fil","Fil","fil"],["groupes","Groupes","groupe"],["soumettre","Soumettre","soumettre"],["mes-documents","Mes documents","document"],["valider","À valider","verifier"]];
+const MEMBER_ROUTES = /^(fil|groupes|groupe-|soumettre|mes-documents|valider|compte)/;
+
+function renderChrome(route){
+  const members = MEMBER_ROUTES.test(route) && logged;
+  const nav = members?NAV_MEMBERS:NAV_PUBLIC;
+  const navEl = $("#nav"); navEl.className = "main"+(members?" members":"");
+  navEl.querySelector(".wrap").innerHTML =
+    `<span class="space-label">${members?"Espace de mobilisation":"Espace des faits"}</span>`+
+    nav.map(([r,l,i])=>`<a href="#${r}" class="${route.startsWith(r)?"on":""}">${ic(i)} ${l}</a>`).join("")+
+    (logged&&!members?`<a href="#fil" style="margin-left:auto;color:var(--accent)">Mon espace →</a>`:"")+
+    (logged&&members?`<a href="#accueil" style="margin-left:auto">← Espace des faits</a>`:"");
+  $("#band").className = "band"+(members?" members":"");
+  $("#spaceName").textContent = members?"La mobilisation (membres)":"Les faits (public)";
+  $("#session").innerHTML = logged
+    ? `<span class="meta">Connecté : <b>Démo-Citoyen</b></span><a class="btn ghost small" href="#compte">Mon compte</a><button class="btn ghost small" id="logout">Se déconnecter</button>`
+    : `<button class="btn small" id="login">Se connecter / Rejoindre</button>`;
+  const li=$("#login"), lo=$("#logout");
+  if(li) li.onclick=()=>{ logged=true; toast("Connecté comme Démo-Citoyen (compte fictif)"); location.hash="#fil"; };
+  if(lo) lo.onclick=()=>{ logged=false; toast("Déconnecté"); location.hash="#accueil"; };
+}
+
+/* ───────── Pages ───────── */
+const pages = {};
+
+pages.accueil = () => `
+<div class="stack" style="gap:38px">
+  <div class="kpi">
+    <div><span class="icbox">${ic("archive","lg")}</span><b>${DOCS.filter(d=>d.status==="valid").length}</b><span>documents validés</span></div>
+    <div><span class="icbox">${ic("territoire","lg")}</span><b>${Object.keys(T).length}</b><span>territoires couverts</span></div>
+    <div><span class="icbox accent">${ic("groupe","lg")}</span><b>${GROUPS.length}</b><span>groupes citoyens actifs</span></div>
+    <div><span class="icbox">${ic("projet","lg")}</span><b>${PROJECTS.length}</b><span>projets éoliens suivis</span></div>
+  </div>
+  <div class="stack" style="gap:14px"><span class="eyebrow">${ic("sceau")} Comment ça marche</span>
+    <div class="how">
+      <div><span class="icbox accent">${ic("soumettre","lg")}</span><b>Un membre dépose</b><span class="meta">un document avec sa source, son auteur, sa date.</span></div>
+      <div><span class="icbox valid">${ic("verifier","lg")}</span><b>Un validateur vérifie</b><span class="meta">que le document est authentique, intégral et retrouvable. Pas qu'il a raison.</span></div>
+      <div><span class="icbox">${ic("empreinte","lg")}</span><b>Le document devient public</b><span class="meta">avec son journal de validation et l'empreinte du fichier.</span></div>
+      <div><span class="icbox">${ic("partager","lg")}</span><b>Vous le partagez</b><span class="meta">à votre conseil municipal, à un journaliste, à vos voisins.</span></div>
+    </div>
+    <a href="#apropos">Lire le protocole de validation →</a>
+  </div>
+  <div class="grid2">
+    <div class="stack" style="gap:10px"><span class="eyebrow">${ic("archive")} Derniers documents validés</span>
+      ${DOCS.filter(d=>d.status==="valid").slice(0,3).map(d=>`<div class="card" style="display:flex;gap:12px"><span class="icbox">${ic(TYPE_ICON[d.type]||"document","lg")}</span><div style="min-width:0"><h3 style="font-size:17px"><a href="#doc-${d.id}" style="text-decoration:none;color:var(--ink)">${esc(d.title)}</a></h3><div class="meta" style="margin-top:4px">${esc(d.type)} · ${esc(fmtDate(d.date))}</div></div></div>`).join("")}
+      <a href="#archive">Toute l'archive →</a></div>
+    <div class="stack" style="gap:10px"><span class="eyebrow">${ic("projet")} Projets en cours</span>
+      ${PROJECTS.map(p=>`<div class="card" style="display:flex;gap:12px"><span class="icbox">${ic("projet","lg")}</span><div style="min-width:0;flex:1"><div class="row" style="justify-content:space-between"><h3 style="font-size:17px"><a href="#projet-${p.id}" style="text-decoration:none;color:var(--ink)">${esc(p.name)}</a></h3>${statusPill(p.statusKind==="neutral"?p.status:p.statusKind)}</div><div class="meta" style="margin-top:4px">${p.territories.map(k=>terr(k).name).join(", ")} · ${p.mw} MW</div></div></div>`).join("")}
+      <a href="#projets">Tous les projets →</a></div>
+  </div>
+  <div class="panel" style="display:flex;gap:16px;align-items:center;flex-wrap:wrap"><span class="icbox accent">${ic("groupe","lg")}</span><div style="flex:1;min-width:220px"><b>Vous vivez près d'un projet annoncé ?</b><br><span class="meta">Créez un compte avec un pseudonyme, rejoignez le groupe de votre municipalité, et retrouvez les gens qui se posent les mêmes questions que vous.</span></div><a class="btn accent" href="#fil" onclick="logged=true">Rejoindre</a></div>
+</div>`;
+
+pages.iconographie = () => {
+  const groups = [
+    ["Marque et motifs",[["vigie","La vigie : l'horizon et le regard. Marque du site."],["vent","Le vent : motif récurrent, jamais menaçant. Sépare les sections, habille la bannière."],["soleil","Le jour, la clarté. Ponctuel, dans la bannière."]]],
+    ["Le registre (espace des faits)",[["archive","Archive"],["document","Document"],["sceau","Sceau de validation"],["empreinte","Empreinte SHA-256 du fichier"],["source","Source retrouvable"],["verifier","Vérifier (un fichier, un document)"],["partager","Partager"]]],
+    ["Types de documents",[["etude","Étude ou rapport technique"],["gouvernement","Document gouvernemental (BAPE, ministère, Hydro-Québec)"],["municipal","Document municipal ou de MRC"],["promoteur","Document de promoteur"],["memoire","Mémoire ou lettre d'un groupe"],["actualite","Article de presse, actualité"],["temoignage","Texte ou témoignage d'un membre"]]],
+    ["Le territoire",[["territoire","Territoire (municipalité, MRC, région)"],["carte","Carte"],["projet","Projet éolien"]]],
+    ["La mobilisation (espace membres)",[["groupe","Groupe citoyen"],["fil","Fil de discussion"],["strategie","Stratégie partagée"],["evenement","Événement, séance, date limite"],["ressources","Outils d'action"],["soumettre","Soumettre un document"],["utile","Utile (la seule réaction)"],["signaler","Signaler"],["compte","Mon compte"]]],
+  ];
+  return `<div class="stack" style="gap:26px">
+    <div class="readable stack" style="gap:8px"><span class="eyebrow">${ic("vent")} Identité visuelle</span><h1 style="font-size:28px">Iconographie</h1>
+      <p>Un seul jeu, dessiné sur une grille de 24, trait de 1,75 à bouts ronds, monochrome. Les icônes prennent la couleur du texte, donc elles fonctionnent partout et dans les deux thèmes. Aucune ne représente une éolienne de façon littérale, sauf « projet », qui est un pictogramme neutre, parce que le site n'est pas contre l'objet mais contre la façon de l'imposer.</p>
+      <p class="meta">Trois idées structurent le jeu : <b>la vigie</b> (regarder, voir venir), <b>le registre</b> (documents, sceau, empreinte : ce qui est vérifiable) et <b>le territoire</b> (collines, village, MRC : d'où on parle).</p></div>
+    ${groups.map(([g,items])=>`<div class="stack" style="gap:10px"><h2 style="font-size:19px">${g}</h2><div class="grid3" style="gap:10px">${items.map(([n,l])=>`<div class="card" style="display:flex;gap:12px;align-items:center;padding:12px 14px"><span class="icbox">${ic(n,"lg")}</span><div style="min-width:0"><div style="font-weight:600;font-size:14px"><code style="background:transparent;padding:0">i-${n}</code></div><div class="meta" style="font-size:13px">${l}</div></div></div>`).join("")}</div></div>`).join("")}
+    <div class="stack" style="gap:10px"><h2 style="font-size:19px">Palette</h2>
+      <div class="grid3" style="gap:10px">${[["--primary","Ardoise-sarcelle : liens, boutons, espace des faits"],["--accent","Ocre : espace de mobilisation, appels à l'action"],["--valid","Forêt : sceau, statut validé"],["--sun","Blé : soleil de la bannière, chaleur ponctuelle"],["--hill-2","Champ : collines de la bannière"],["--sky-1","Ciel : haut de la bannière"]].map(([v,l])=>`<div class="card" style="display:flex;gap:12px;align-items:center;padding:12px 14px"><span style="width:40px;height:40px;border-radius:8px;background:var(${v});border:1px solid var(--line);flex:none"></span><div><code style="background:transparent;padding:0">${v}</code><div class="meta" style="font-size:13px">${l}</div></div></div>`).join("")}</div>
+      <p class="meta readable">Les deux espaces se distinguent par la bande sous la navigation : ardoise pour les faits, ocre pour la mobilisation. Même mise en page, même typographie.</p></div>
+    <div class="stack" style="gap:10px"><h2 style="font-size:19px">La bannière</h2>
+      <p class="readable">Un paysage, pas une menace. Collines de l'Estrie, champs, village avec son clocher, et à gauche une vigie sur sa tour qui regarde vers l'horizon. Le vent traverse le ciel en trois lignes. Déclinable par région : on change les collines, le village et la lumière, le reste tient.</p></div>
+  </div>`;
+};
+
+pages.archive = (q="") => {
+  const docs = DOCS.filter(d=>d.status==="valid" || logged).filter(d=>!q || (d.title+d.summary+d.authors+d.themes.join(" ")).toLowerCase().includes(q.toLowerCase()));
+  return `
+<div class="side">
+  <aside class="card filters">
+    <label>Type</label><select id="f-type"><option>Tous</option><option>Étude ou rapport technique</option><option>Document gouvernemental</option><option>Document municipal ou de MRC</option><option>Document de promoteur</option><option>Mémoire ou lettre d'un groupe citoyen</option><option>Article de presse</option><option>Texte d'un membre</option></select>
+    <label>Territoire</label><select id="f-terr"><option>Tous</option>${Object.values(T).map(t=>`<option>${esc(t.name)}</option>`).join("")}</select>
+    <label>Projet</label><select id="f-proj"><option>Tous</option>${PROJECTS.map(p=>`<option>${esc(p.name)}</option>`).join("")}</select>
+    <label>Thème</label><select id="f-theme"><option>Tous</option>${THEMES.map(t=>`<option>${t}</option>`).join("")}</select>
+    ${logged?`<label>Statut</label><select id="f-status"><option>Tous</option><option>Validé</option><option>En attente</option></select>`:""}
+    <p class="meta" style="margin-top:14px;font-size:13px">Les filtres sont décoratifs dans ce prototype. La recherche en haut de page fonctionne.</p>
+  </aside>
+  <section>
+    <div class="row" style="justify-content:space-between;margin-bottom:8px"><h1 style="font-size:26px">Archive</h1><span class="meta">${docs.length} document${docs.length>1?"s":""}${q?` pour « ${esc(q)} »`:""} · tri : plus récents</span></div>
+    ${logged?`<p class="notice" style="margin-bottom:10px">Connecté : vous voyez aussi les documents en attente de validation. Les visiteurs ne voient que les documents validés.</p>`:""}
+    <div class="card" style="padding:0 16px">${docs.map(docRow).join("")||`<p class="meta" style="padding:20px 0">Aucun document ne correspond.</p>`}</div>
+  </section>
+</div>`;
+};
+
+pages.doc = id => {
+  const d = DOCS.find(x=>x.id===id); if(!d) return `<p>Document introuvable.</p>`;
+  const v = d.validation.find(x=>x.decision==="Validé");
+  const proj = PROJECTS.find(p=>p.id===d.project);
+  return `
+<div class="side" style="grid-template-columns:1fr 300px">
+  <article class="stack" style="gap:20px">
+    <div><a class="meta" href="#archive">← Archive</a></div>
+    <div class="stack" style="gap:8px">
+      <span class="eyebrow">${esc(d.type)}</span>
+      <h1 style="font-size:30px">${esc(d.title)}</h1>
+      <div class="meta">${esc(d.authors)} · ${esc(fmtDate(d.date))}${d.pages?` · ${d.pages} pages`:""} · ${esc(d.hosting)}</div>
+      <div class="row" style="gap:6px">${d.territories.map(tagT).join("")}${proj?`<a class="tag" href="#projet-${proj.id}"><b>projet</b> ${esc(proj.name)}</a>`:""}${d.themes.map(t=>`<span class="tag">${esc(t)}</span>`).join("")}</div>
+    </div>
+    ${v?`<div class="seal"><div class="ck" style="background:transparent;color:var(--valid);width:auto;height:auto">${ic("sceau","xl")}</div><div><b>Validé le ${esc(fmtDate(v.d.slice(0,10)))} par ${esc(v.who)}</b> · groupe ${esc(v.group)} · protocole ${v.proto}<small>Ce sceau atteste que le document est authentique, sourcé et daté. Il ne porte pas sur l'exactitude de son contenu.</small></div></div>`
+        :`<div class="panel"><b>En attente de validation.</b> Ce document est visible des membres seulement. Il apparaîtra dans l'espace public une fois qu'un validateur aura passé la grille.</div>`}
+    <div class="readable stack" style="gap:10px"><h2 style="font-size:20px">Résumé</h2><p style="font-size:17px">${esc(d.summary)}</p><p class="meta">Résumé rédigé par le soumetteur et révisé par le validateur. Ce n'est pas un extrait du document.</p></div>
+    <div class="row">
+      ${d.hosting==="Hébergé"?`<button class="btn" onclick="toast('Dans l\\'application réelle : ouverture du PDF via un lien signé')">Ouvrir le document</button>`:`<a class="btn" href="${esc(d.source)}">Consulter à la source ↗</a>`}
+      <button class="btn ghost" onclick="copy(location.href)">${ic("partager")} Partager</button>
+      <button class="btn ghost" onclick="copy('${esc(d.authors)} (${(d.date||'').slice(0,4)}). ${esc(d.title)}. Vigie Éolienne, document ${d.id}.')">Copier la citation</button>
+    </div>
+    <div class="stack" style="gap:8px"><h2 style="font-size:20px;display:flex;gap:8px;align-items:center">${ic("empreinte")} Journal de validation</h2>
+      <div class="tablewrap"><table><thead><tr><th>Date</th><th>Validateur</th><th>Décision</th><th>Protocole</th><th>Empreinte SHA-256</th></tr></thead><tbody>
+      ${d.validation.length?d.validation.map(x=>`<tr><td style="white-space:nowrap">${esc(x.d)}</td><td>${esc(x.who)}<br><span class="meta">${esc(x.group)}</span></td><td>${esc(x.decision)}${x.note?`<br><span class="meta">${esc(x.note)}</span>`:""}</td><td>${x.proto}</td><td>${x.hash?`<span class="hash">${x.hash.slice(0,16)}…</span> <button class="btn ghost small" onclick="copy('${x.hash}')">copier</button>`:`<span class="meta">lien seulement</span>`}</td></tr>`).join(""):`<tr><td colspan="5" class="meta">Aucune entrée. Le document n'a pas encore été examiné.</td></tr>`}
+      </tbody></table></div>
+      <p class="meta">Ce journal est en lecture seule. Il ne peut être ni modifié ni effacé, même par un administrateur. <a href="#verifier">Vérifier un fichier contre l'archive</a>.</p>
+    </div>
+    ${d.related.length?`<div class="stack" style="gap:8px"><h2 style="font-size:20px">Documents liés</h2><div class="card" style="padding:0 16px">${d.related.map(r=>DOCS.find(x=>x.id===r)).filter(Boolean).map(docRow).join("")}</div></div>`:""}
+  </article>
+  <aside class="stack" style="gap:14px">
+    <div class="card stack" style="gap:8px;font-size:14px">
+      <span class="eyebrow">Source</span>
+      <div class="meta" style="word-break:break-word">${esc(d.source)}</div>
+      <span class="eyebrow" style="margin-top:6px">Hébergement</span>
+      <div>${esc(d.hosting)}<br><span class="meta">${esc(d.license)}</span></div>
+      <span class="eyebrow" style="margin-top:6px">Identifiant</span>
+      <div><code>${d.id}</code></div>
+    </div>
+    ${proj?`<div class="card stack" style="gap:6px"><span class="eyebrow">Projet concerné</span><a href="#projet-${proj.id}" style="font-family:var(--display);font-size:17px;font-weight:600;text-decoration:none;color:var(--ink)">${esc(proj.name)}</a><div class="meta">${esc(proj.status)} · ${esc(proj.promoter)}</div></div>`:""}
+    <div class="card stack" style="gap:6px;font-size:14px"><span class="eyebrow">Un problème avec ce document ?</span><p class="meta">Erreur dans les métadonnées, document retiré à sa source, demande de retrait par un ayant droit.</p><button class="btn ghost small" onclick="toast('Formulaire de signalement (prototype)')">Signaler</button></div>
+  </aside>
+</div>`;
+};
+
+pages.projets = () => `
+<div class="stack" style="gap:20px">
+  <div class="readable"><h1 style="font-size:28px">Projets éoliens suivis</h1><p class="meta">Fiches constituées à partir des documents validés de l'archive. Chaque date de la chronologie renvoie à un document. Une carte du Québec avec tous les projets viendra remplacer cette liste.</p></div>
+  <div class="notice">Carte interactive du Québec — à venir. Ici, les projets sont regroupés par région.</div>
+  ${["Estrie","Bas-Saint-Laurent"].map(r=>`<div class="stack" style="gap:10px"><span class="eyebrow">${r}</span>
+    ${PROJECTS.filter(p=>p.territories.some(k=>regionOf(k)===r)).map(p=>`
+    <div class="card"><div class="row" style="justify-content:space-between"><h3 style="display:flex;gap:10px;align-items:center"><span class="icbox">${ic("projet","lg")}</span><a href="#projet-${p.id}" style="text-decoration:none;color:var(--ink)">${esc(p.name)}</a></h3>${statusPill(p.statusKind==="neutral"?p.status:p.statusKind)}</div>
+    <div class="meta" style="margin:6px 0">${ic("promoteur")} ${esc(p.promoter)} · ${p.turbines} turbines · ${p.mw} MW · ${ic("municipal")} ${esc(p.partner)}</div>
+    <div class="row" style="gap:6px">${p.territories.map(tagT).join("")}</div>
+    <p style="font-size:14px;margin-top:8px">${esc(p.summary)}</p></div>`).join("")}</div>`).join("")}
+</div>`;
+
+pages.projet = id => {
+  const p = PROJECTS.find(x=>x.id===id); if(!p) return `<p>Projet introuvable.</p>`;
+  const docs = DOCS.filter(d=>d.project===id && d.status==="valid");
+  const groups = GROUPS.filter(g=>p.territories.includes(g.territory));
+  return `
+<div class="stack" style="gap:24px">
+  <div><a class="meta" href="#projets">← Projets</a></div>
+  <div class="stack" style="gap:8px">
+    <div class="row"><span class="eyebrow">Projet éolien</span>${statusPill(p.statusKind==="neutral"?p.status:p.statusKind)}</div>
+    <h1>${esc(p.name)}</h1>
+    <div class="meta">${esc(p.promoter)} · ${esc(p.partner)} · ${p.turbines} turbines · ${p.mw} MW</div>
+    <div class="row" style="gap:6px">${p.territories.map(tagT).join("")}</div>
+    <p class="readable" style="font-size:17px">${esc(p.summary)}</p>
+  </div>
+  <div class="grid2">
+    <div class="stack" style="gap:10px"><h2>Chronologie</h2>
+      <div class="timeline">${p.timeline.map(e=>`<div class="tl"><time>${esc(fmtDate(e.d))}</time><div>${esc(e.t)}</div><a href="#doc-${e.doc}" style="font-size:13px">Document source →</a></div>`).join("")}</div>
+      <p class="meta">Chaque entrée de la chronologie exige un document validé. Pas de document, pas d'entrée.</p>
+    </div>
+    <div class="stack" style="gap:14px">
+      <div class="stack" style="gap:8px"><h2>Groupes citoyens actifs</h2>
+        ${groups.map(g=>`<div class="card"><div class="row" style="justify-content:space-between"><b>${esc(g.name)}</b><span class="meta">${g.members} membres</span></div><div class="meta">${esc(g.desc)}</div><a href="#groupe-${g.id}" style="font-size:14px" onclick="logged=true">Rejoindre ce groupe →</a></div>`).join("")||`<p class="meta">Aucun groupe pour l'instant. <a href="#groupes">Demander la création d'un groupe</a>.</p>`}</div>
+      <div class="notice">Carte locale du territoire touché — à venir.</div>
+    </div>
+  </div>
+  <div class="stack" style="gap:8px"><h2>Documents validés (${docs.length})</h2><div class="card" style="padding:0 16px">${docs.map(docRow).join("")}</div></div>
+</div>`;
+};
+
+pages.territoire = slug => {
+  const key = Object.keys(T).find(k=>T[k].slug===slug); const t=T[key]; if(!t) return `<p>Territoire introuvable.</p>`;
+  const docs = DOCS.filter(d=>d.territories.includes(key)&&d.status==="valid");
+  const projs = PROJECTS.filter(p=>p.territories.includes(key));
+  const g = GROUPS.find(x=>x.territory===key);
+  return `<div class="stack" style="gap:20px">
+    <div class="stack" style="gap:6px"><span class="eyebrow">${t.region?`Région ${esc(t.region)}`:esc(t.parent)} › ${esc(t.level)}</span><h1>${esc(t.name)}</h1></div>
+    <div class="grid2">
+      <div class="stack" style="gap:8px"><h2>Projets touchant ce territoire</h2>${projs.map(p=>`<div class="card"><div class="row" style="justify-content:space-between"><a href="#projet-${p.id}" style="font-weight:600;text-decoration:none;color:var(--ink)">${esc(p.name)}</a>${statusPill(p.statusKind==="neutral"?p.status:p.statusKind)}</div></div>`).join("")||`<p class="meta">Aucun.</p>`}</div>
+      <div class="stack" style="gap:8px"><h2>Groupe citoyen</h2>${g?`<div class="card"><b>${esc(g.name)}</b> · ${g.members} membres<div class="meta">${esc(g.desc)}</div><a href="#groupe-${g.id}" onclick="logged=true">Rejoindre →</a></div>`:`<p class="meta">Pas encore de groupe ici.</p>`}</div>
+    </div>
+    <div class="stack" style="gap:8px"><h2>Documents (${docs.length})</h2><div class="card" style="padding:0 16px">${docs.map(docRow).join("")||`<p class="meta" style="padding:16px 0">Aucun document validé.</p>`}</div></div>
+  </div>`;
+};
+
+pages.ressources = () => `<div class="stack" style="gap:18px">
+  <div class="readable"><h1 style="font-size:28px">Ressources et outils d'action</h1><p class="meta">Produits par les membres, validés comme des documents, réutilisables d'une région à l'autre. Module prévu à l'étape 2 ; voici à quoi il ressemblera.</p></div>
+  <div class="grid3">
+    ${[["Modèles de lettres","Au conseil municipal · au préfet · au député · à la Régie de l'énergie · au BAPE","4 modèles"],["Guides pratiques","Déposer un mémoire · Demander un document municipal · Intervenir à une séance de conseil · Lire un contrat de partenariat","4 guides"],["Questions à poser","Par étape : avis d'intérêt · séance d'information · consultation · résolution d'engagement","3 fiches"],["Récits de démarches","Ce qu'un groupe a fait, chronologie, résultats, leçons","2 récits"]].map(([t,d,n])=>`<div class="card stack" style="gap:6px"><h3>${t}</h3><p class="meta">${d}</p><span class="pill neutral">${n} · démo</span></div>`).join("")}
+  </div>
+  <div class="stack" style="gap:8px"><h2>Stratégies partagées entre régions</h2>
+    ${STRATEGIES.map(s=>`<div class="card stack" style="gap:6px"><span class="eyebrow">${esc(s.g)}</span><h3>${esc(s.title)}</h3><p style="font-size:14px">${esc(s.body)}</p><div class="quote"><b>Résultat :</b> ${esc(s.outcome)}</div></div>`).join("")}
+  </div></div>`;
+
+pages.actualite = () => `<div class="stack" style="gap:14px">
+  <div class="readable"><h1 style="font-size:28px">Actualité curée</h1><p class="meta">Liens vers la presse et les décisions officielles, avec un résumé neutre de deux phrases. Aucun commentaire ici ; la discussion se fait dans les groupes. Module de l'étape 2.</p></div>
+  ${[["2026-10-09","Journal régional (fictif)","La MRC des Sources reporte sa décision sur le projet des Collines","Le conseil a reporté au 18 novembre le vote sur une participation financière. Trois maires demandent une consultation formelle."],["2026-10-01","Communiqué (fictif)","Énergie Vallon dépose une version révisée de son étude acoustique","Une deuxième version intègre des mesures d'atténuation pour trois résidences du rang des Collines. Le document est dans l'archive."],["2026-09-15","Quotidien national (fictif)","Les partenariats municipaux dans l'éolien sous la loupe du Vérificateur","Un rapport examine le partage des risques entre promoteurs et municipalités dans six projets récents."]].map(([d,s,t,r])=>`<div class="card"><div class="meta">${esc(fmtDate(d))} · ${esc(s)}</div><h3 style="margin:4px 0">${esc(t)}</h3><p style="font-size:14px">${esc(r)}</p></div>`).join("")}
+  </div>`;
+
+pages.apropos = () => `<div class="readable stack" style="gap:18px">
+  <h1 style="font-size:28px">À propos</h1>
+  <p style="font-size:17px">Vigie Éolienne est une plateforme citoyenne, libre et auto-hébergée au Québec, qui rassemble et vérifie l'information sur les projets éoliens en région, et qui permet aux citoyens de se regrouper par municipalité et par MRC pour s'organiser.</p>
+  <h2>Notre position</h2>
+  <p>Nous ne sommes pas contre l'énergie éolienne. Nous sommes contre la façon dont les projets sont imposés aux communautés rurales : partenariats financiers municipaux engagés sans consultation réelle, information fragmentaire, impacts sur les paysages, les propriétés et le milieu de vie traités comme des détails. Là où les citoyens s'opposent clairement, un projet ne devrait pas se faire.</p>
+  <h2>Pourquoi nous faire confiance</h2>
+  <p>Parce que vous n'avez pas à le faire. Chaque document validé affiche qui l'a validé, quand, selon quelle grille, et l'empreinte du fichier. Une étude favorable à l'éolien est validée avec les mêmes critères qu'une étude défavorable. Le sceau de validation atteste qu'un document est authentique, intégral et retrouvable, pas qu'il a raison.</p>
+  <h2>Le protocole de validation, en bref</h2>
+  <div class="card stack" style="gap:6px;font-size:14px">
+    ${["Source retrouvable","Auteur ou organisme identifié","Date établie","Document intégral","Type correct","Résumé fidèle, sans opinion","Hébergement conforme aux droits d'auteur","Aucun renseignement personnel exposé"].map((c,i)=>`<div class="check"><span style="font-family:var(--mono);color:var(--ink-2)">${i+1}</span><span>${c}</span></div>`).join("")}
+  </div>
+  <p class="meta">Le protocole est versionné. Chaque journal indique la version qui s'appliquait. Les anciens journaux ne sont jamais réécrits.</p>
+  <h2>Deux espaces</h2>
+  <p><b>L'espace des faits</b>, public, où tout est neutre et sourcé. <b>L'espace de mobilisation</b>, réservé aux membres, où les groupes discutent et s'organisent librement. Ce que vous lisez ici, vous pouvez l'envoyer à n'importe qui.</p>
+  <h2>Qui est derrière</h2>
+  <p>Un groupe de citoyens de la MRC des Sources, en Estrie. Le code est libre, les données sont exportables, et le projet passera à un organisme à but non lucratif dès que plusieurs régions l'utiliseront. Tous les revenus et dépenses seront publics.</p>
+</div>`;
+
+pages.charte = () => `<div class="readable stack" style="gap:14px"><h1 style="font-size:28px">Charte de participation</h1>
+  <ol style="padding-left:20px;display:grid;gap:8px;font-size:17px">
+  <li>On parle des projets, des décisions et des documents. On ne s'en prend pas aux personnes.</li>
+  <li>On distingue ce qu'on sait (sourcé) de ce qu'on pense (opinion).</li>
+  <li>On ne publie aucun renseignement personnel sur quelqu'un d'autre.</li>
+  <li>On respecte les autres membres, y compris ceux qui ne pensent pas comme nous.</li>
+  <li>Ce qu'on écrit ici peut être lu par les membres ; ce qui est validé peut être lu par tout le monde.</li>
+  <li>On ne copie pas ici des textes dont on n'a pas les droits.</li>
+  <li>Les animateurs et admins peuvent masquer ou retirer ce qui contrevient à cette charte, et le disent.</li></ol></div>`;
+
+pages.confidentialite = () => `<div class="readable stack" style="gap:14px"><h1 style="font-size:28px">Confidentialité et Loi 25</h1>
+  <p>On recueille le minimum : votre courriel, un pseudonyme, un mot de passe. Votre municipalité si vous la donnez. Jamais votre opinion, jamais votre nom réel sans votre choix, et il n'est jamais affiché.</p>
+  <p>Être membre ici révèle de fait une opinion. C'est pour ça que les pseudonymes sont la règle, que la liste des membres d'un groupe n'est visible que de ce groupe, et qu'aucun export ni aucune API ne dit qui est membre de quoi.</p>
+  <p>Vous pouvez télécharger toutes vos données et supprimer votre compte depuis « Mon compte », sans demander la permission à personne. Vos contributions deviennent alors « Membre supprimé ».</p>
+  <p>Responsable de la protection des renseignements personnels : à nommer (adresse de contact publique). Hébergement au Québec. Aucun traqueur, aucune publicité.</p></div>`;
+
+pages.verifier = () => `<div class="readable stack" style="gap:14px"><h1 style="font-size:28px">Vérifier un fichier</h1>
+  <p>Déposez un fichier PDF. Son empreinte SHA-256 est calculée dans votre navigateur et comparée au journal de validation. Vous saurez si c'est exactement le fichier qui a été validé, sans qu'il soit envoyé nulle part.</p>
+  <div class="card" style="border-style:dashed;text-align:center;padding:34px;color:var(--ink-2)">Glissez un fichier ici (prototype : inactif)</div>
+  <p class="meta">Dans l'application réelle, un fichier identique à un document validé affiche sa fiche ; un fichier inconnu ou modifié affiche « aucune correspondance ».</p></div>`;
+
+/* ── Espace membres ── */
+pages.fil = () => `
+<div class="side" style="grid-template-columns:1fr 280px">
+  <section class="stack" style="gap:14px">
+    <div class="row" style="justify-content:space-between"><h1 style="font-size:26px">Fil</h1><span class="meta">Chronologique · vos ${GROUPS.length} groupes</span></div>
+    <div class="card stack" style="gap:8px"><textarea placeholder="Partager une information, une question, un document…" style="min-height:64px"></textarea><div class="row" style="justify-content:space-between"><select style="width:auto"><option>Publier dans : Saint-Adrien</option><option>MRC des Sources</option><option>Wotton</option></select><button class="btn accent small" onclick="toast('Publié (prototype)')">Publier</button></div></div>
+    <div class="card" style="padding:0 16px">${POSTS.map(p=>{const g=GROUPS.find(x=>x.id===p.g);const d=DOCS.find(x=>x.id===p.doc);return `<div class="post">
+      <div class="who"><b>${esc(p.who)}</b><a href="#groupe-${g.id}" class="tag">${esc(g.name)}</a><span class="meta">${esc(p.when)}</span></div>
+      <p>${esc(p.body)}</p>
+      ${d?`<a class="quote" href="#doc-${d.id}" style="text-decoration:none;color:var(--ink);display:block"><span class="eyebrow">Document de l'archive</span><br>${esc(d.title)} <span class="meta">· ${d.status==="valid"?"validé":"en attente"}</span></a>`:""}
+      <div class="acts"><a href="#" onclick="toast('Marqué utile');return false">Utile · ${p.useful}</a><a href="#" onclick="toast('Fil de commentaires (prototype)');return false">Commentaires · ${p.comments}</a><a href="#" onclick="toast('Signalement envoyé aux animateurs (prototype)');return false">Signaler</a></div></div>`;}).join("")}</div>
+  </section>
+  <aside class="stack" style="gap:12px">
+    <div class="card stack" style="gap:8px"><span class="eyebrow">À venir</span>${GROUPS.filter(g=>g.next&&!g.next.startsWith("Aucun")).map(g=>`<div style="font-size:14px"><b>${esc(g.name)}</b><br>${esc(g.next)}</div>`).join("")}</div>
+    <div class="card stack" style="gap:6px"><span class="eyebrow">En attente de validation</span>${DOCS.filter(d=>d.status==="pending").map(d=>`<a href="#doc-${d.id}" style="font-size:14px">${esc(d.title)}</a>`).join("")}<a href="#valider" class="meta">Tableau de validation →</a></div>
+    <p class="meta" style="font-size:13px">Aucun algorithme. Le fil montre tout, dans l'ordre, et rien d'autre.</p>
+  </aside>
+</div>`;
+
+pages.groupes = () => `<div class="stack" style="gap:18px">
+  <div class="row" style="justify-content:space-between"><h1 style="font-size:26px">Groupes</h1><button class="btn ghost small" onclick="toast('Demande envoyée aux administrateurs (prototype)')">Demander un groupe pour mon territoire</button></div>
+  <div class="grid2">${GROUPS.map(g=>`<div class="card stack" style="gap:6px"><div class="row" style="justify-content:space-between"><h3 style="display:flex;gap:10px;align-items:center"><span class="icbox accent">${ic("groupe","lg")}</span><a href="#groupe-${g.id}" style="text-decoration:none;color:var(--ink)">${esc(g.name)}</a></h3>${tagT(g.territory)}</div><p class="meta">${esc(g.desc)}</p><div class="meta">${g.members} membres · animé par ${g.facilitators.join(", ")}</div></div>`).join("")}</div>
+  <p class="meta readable">Un groupe par municipalité, un par MRC, un par projet si nécessaire. Les groupes d'autres régions sont visibles pour partager les stratégies, même si vous n'en êtes pas membre.</p></div>`;
+
+pages.groupe = id => {
+  const g = GROUPS.find(x=>x.id===id); if(!g) return `<p>Groupe introuvable.</p>`;
+  const posts = POSTS.filter(p=>p.g===id);
+  const docs = DOCS.filter(d=>d.territories.includes(g.territory));
+  return `<div class="stack" style="gap:18px">
+    <div><a class="meta" href="#groupes">← Groupes</a></div>
+    <div class="stack" style="gap:6px"><div class="row"><span class="eyebrow">Groupe</span>${tagT(g.territory)}</div><h1>${esc(g.name)}</h1><p class="meta">${esc(g.desc)} · ${g.members} membres · animé par ${g.facilitators.join(", ")}</p></div>
+    <div class="steps"><span class="on">Fil</span><span>Documents (${docs.length})</span><span>Événements</span><span>Stratégie</span><span>Membres</span></div>
+    <div class="grid2">
+      <div class="card" style="padding:0 16px">${posts.map(p=>{const d=DOCS.find(x=>x.id===p.doc);return `<div class="post"><div class="who"><b>${esc(p.who)}</b><span class="meta">${esc(p.when)}</span></div><p>${esc(p.body)}</p>${d?`<a class="quote" href="#doc-${d.id}" style="text-decoration:none;color:var(--ink);display:block">${esc(d.title)}</a>`:""}<div class="acts"><span>Utile · ${p.useful}</span><span>Commentaires · ${p.comments}</span></div></div>`;}).join("")||`<p class="meta" style="padding:16px 0">Aucune publication encore.</p>`}</div>
+      <div class="stack" style="gap:12px">
+        <div class="card stack" style="gap:6px"><span class="eyebrow">Prochain événement</span><div>${esc(g.next)}</div></div>
+        <div class="card stack" style="gap:6px"><span class="eyebrow">Documents du territoire</span>${docs.map(d=>`<a href="#doc-${d.id}" style="font-size:14px">${esc(d.title)}</a>`).join("")}</div>
+      </div>
+    </div></div>`;
+};
+
+pages.soumettre = () => `<div class="readable stack" style="gap:16px">
+  <h1 style="font-size:26px">Soumettre un document</h1>
+  <div class="steps"><span class="on">1. Fichier ou lien</span><span>2. Métadonnées</span><span>3. Hébergement et licence</span></div>
+  <div class="card stack" style="gap:14px">
+    <div><label class="eyebrow" style="display:block;margin-bottom:6px">Fichier</label><div class="card" style="border-style:dashed;text-align:center;padding:26px;color:var(--ink-2)">Glissez un PDF ici, ou cliquez pour choisir</div></div>
+    <div class="meta" style="text-align:center">ou</div>
+    <div><label class="eyebrow" style="display:block;margin-bottom:6px">Lien vers le document</label><input type="url" placeholder="https://…"></div>
+    <div class="panel" style="font-size:14px"><b>Ce qui se passe ensuite :</b> on calcule l'empreinte du fichier, on vérifie qu'il n'est pas déjà dans l'archive, on en extrait le texte et on vous propose un titre, un auteur et une date. Vous complétez le résumé, les territoires et les thèmes. Puis vous nous dites qui a produit le document et si on a le droit de l'héberger ; sinon, on garde le lien.</div>
+    <div class="row" style="justify-content:flex-end"><button class="btn accent" onclick="toast('Étape 2 : métadonnées (prototype)')">Continuer</button></div>
+  </div>
+  <p class="meta">Le document sera visible de votre groupe tout de suite, avec la mention « en attente de validation ». Il deviendra public une fois validé.</p></div>`;
+
+pages["mes-documents"] = () => `<div class="stack" style="gap:14px"><h1 style="font-size:26px">Mes documents</h1>
+  <div class="card" style="padding:0 16px">${DOCS.filter(d=>["temoignage-rang","memoire-regroupement"].includes(d.id)).map(docRow).join("")}</div>
+  <p class="meta">Un document rejeté affiche le motif et peut être resoumis une fois avec corrections.</p></div>`;
+
+pages.valider = () => {
+  const d = DOCS.find(x=>x.id==="etude-immobilier");
+  return `<div class="side" style="grid-template-columns:300px 1fr">
+  <aside class="card stack" style="gap:8px"><span class="eyebrow">À valider (${DOCS.filter(x=>x.status==="pending").length})</span>
+    ${DOCS.filter(x=>x.status==="pending").map(x=>`<a href="#valider" style="font-size:14px;${x.id===d.id?"font-weight:600;":""}">${esc(x.title)}</a>`).join("")}
+    <p class="meta" style="font-size:13px;margin-top:8px">Vous ne pouvez pas valider un document que vous avez soumis.</p></aside>
+  <section class="stack" style="gap:14px">
+    <div><span class="eyebrow">${esc(d.type)}</span><h1 style="font-size:24px">${esc(d.title)}</h1><div class="meta">${esc(d.authors)} · ${esc(fmtDate(d.date))} · ${esc(d.hosting)}</div></div>
+    <p class="quote">${esc(d.summary)}</p>
+    <div class="card stack" style="gap:0"><span class="eyebrow" style="margin-bottom:6px">Grille de vérifiabilité · protocole v1</span>
+      ${[["Source retrouvable","Le lien fonctionne ou la provenance permet de retrouver le document."],["Auteur ou organisme identifié",""],["Date établie","Ou estimation notée."],["Document intégral","Pas un extrait, une capture ou un montage."],["Type correct","Une présentation de promoteur n'est pas une étude."],["Résumé fidèle","Sans opinion. Corrigez-le au besoin ; la correction est journalisée."],["Hébergement conforme","Article de revue sous droits → lien seulement. C'est le cas ici."],["Aucun renseignement personnel exposé",""]].map(([c,h],i)=>`<label class="check"><input type="checkbox" id="ck${i}" ${i<5||i===6?"checked":""}><span><b>${c}</b>${h?`<br><span class="meta">${h}</span>`:""}</span></label>`).join("")}
+    </div>
+    <div class="card stack" style="gap:8px"><span class="eyebrow">Note (obligatoire en cas de rejet ou de demande)</span><textarea placeholder="Ex. : le résumé affirme un effet « mesurable » ; l'étude parle d'un effet « faible et variable ». À reformuler."></textarea></div>
+    <div class="row"><button class="btn" onclick="toast('Validé. Journal écrit avec l\\'empreinte du fichier. Le document est public.')">Valider</button><button class="btn ghost" onclick="toast('Renvoyé au soumetteur avec votre note')">Demander des précisions</button><button class="btn ghost" style="color:var(--danger);border-color:var(--danger)" onclick="toast('Rejeté. Motif visible du soumetteur.')">Rejeter</button></div>
+    <p class="meta">Chaque décision écrit une ligne immuable dans le journal public du document, avec votre pseudonyme, votre groupe, la version du protocole et l'empreinte SHA-256.</p>
+  </section></div>`;
+};
+
+pages.compte = () => `<div class="readable stack" style="gap:14px"><h1 style="font-size:26px">Mon compte</h1>
+  <div class="card stack" style="gap:12px">
+    <div><label class="eyebrow" style="display:block;margin-bottom:6px">Pseudonyme (affiché)</label><input type="text" value="Démo-Citoyen"></div>
+    <div><label class="eyebrow" style="display:block;margin-bottom:6px">Courriel</label><input type="text" value="demo@exemple.invalid"></div>
+    <div><label class="eyebrow" style="display:block;margin-bottom:6px">Municipalité (facultatif)</label><select><option>Saint-Adrien</option><option>Wotton</option><option>Aucune</option></select></div>
+    <div><label class="eyebrow" style="display:block;margin-bottom:6px">Courriels</label><select><option>Résumé quotidien</option><option>Immédiat</option><option>Hebdomadaire</option><option>Jamais</option></select></div>
+  </div>
+  <div class="card stack" style="gap:10px"><span class="eyebrow">Vos données (Loi 25)</span>
+    <div class="row"><button class="btn ghost small" onclick="toast('Export JSON de toutes vos données (prototype)')">Télécharger toutes mes données</button><button class="btn ghost small" style="color:var(--danger);border-color:var(--danger)" onclick="toast('Suppression réelle du compte ; contributions anonymisées (prototype)')">Supprimer mon compte</button></div>
+    <p class="meta">La suppression est réelle et immédiate. Vos documents validés restent dans l'archive sous leur licence, attribués à « Membre supprimé ».</p></div></div>`;
+
+/* ───────── Routeur ───────── */
+function route(){
+  const h = (location.hash||"#accueil").slice(1);
+  if(MEMBER_ROUTES.test(h) && !logged){ logged=true; toast("Connecté comme Démo-Citoyen (compte fictif)"); }
+  renderChrome(h);
+  $("#hero").hidden = !(h==="accueil"||h==="");
+  let html;
+  if(h.startsWith("doc-")) html=pages.doc(h.slice(4));
+  else if(h.startsWith("projet-")) html=pages.projet(h.slice(7));
+  else if(h.startsWith("territoire-")) html=pages.territoire(h.slice(11));
+  else if(h.startsWith("groupe-")) html=pages.groupe(h.slice(7));
+  else if(h.startsWith("archive")) html=pages.archive($("#q").value);
+  else html=(pages[h]||pages.accueil)();
+  $("#view").innerHTML=html;
+  window.scrollTo({top:0});
+}
+$("#q").addEventListener("input",()=>{ if(!location.hash.startsWith("#archive")) location.hash="#archive"; else route(); });
+$("#q").addEventListener("keydown",e=>{ if(e.key==="Enter"){ location.hash="#archive"; route(); } });
+window.addEventListener("hashchange",route);
+route();
+</script>
+
+</body>
+</html>
